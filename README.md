@@ -33,6 +33,8 @@ In your browser type :
 localhost:3000
 ```
 
+## API Organisation
+
 ```mermaid
 flowchart LR
     A[User] --> |play| B{Motus}
