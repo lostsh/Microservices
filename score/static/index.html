@@ -1,0 +1,33 @@
+<!-- scores.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scores</title>
+</head>
+<body>
+    <h1>Scores</h1>
+    <ul id="scoresList"></ul>
+
+    <script>
+        // Fonction pour récupérer et afficher les scores d'un joueur spécifique
+        async function fetchAndDisplayScores(playerName) {
+            const response = await fetch(`/getscore?player=${playerName}`);
+            const data = await response.json();
+            const scoresList = document.getElementById('scoresList');
+
+            scoresList.innerHTML = ''; // Efface la liste précédente des scores
+
+            Object.keys(data).forEach(player => {
+                const scoreItem = document.createElement('li');
+                scoreItem.textContent = `${player}: ${data[player]}`;
+                scoresList.appendChild(scoreItem);
+            });
+        }
+
+        // Appeler la fonction au chargement de la page avec un joueur spécifique (ex: Alice)
+        fetchAndDisplayScores('Benoît');
+    </script>
+</body>
+</html>
