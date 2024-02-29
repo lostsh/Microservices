@@ -1,5 +1,9 @@
 # Application motus
 
+## Explanation
+
+Allow users to play Motus (Wordle) and to keep track of the scores of the players.
+
 ## Run the application
 
 ```bash
