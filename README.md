@@ -37,9 +37,9 @@ localhost:3000
 
 ```mermaid
 flowchart LR
-    A[User] --> |play| B{Motus}
-    A --> |getScore| C[BDD]
-    A --> |setScore| C[BDD]
+    A[User] --> |play| B[Motus]
+    A --> |getScore| C[Score]
+    A --> |setScore| C[Score]
 ```
 
 
