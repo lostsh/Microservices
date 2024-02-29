@@ -33,8 +33,11 @@ In your browser type :
 localhost:3000
 ```
 
-
+```mermaid
 flowchart LR
     A[User] --> |play| B{Motus}
     A --> |getScore| C[BDD]
     A --> |setScore| C[BDD]
+```
+
+
