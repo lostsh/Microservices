@@ -5,12 +5,13 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-
+const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:16379'
 // Middleware
 app.use(bodyParser.json());
 
 // Create a Redis client
-const redisClient = redis.createClient();
+console.log('REDIS_URL:', REDIS_URL);
+const redisClient = redis.createClient({url:REDIS_URL});
 
 // Redis error handling
 redisClient.on('error', (err) => {
