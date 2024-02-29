@@ -4,6 +4,8 @@
 
 Allow users to play Motus (Wordle) and to keep track of the scores of the players.
 
+
+
 ## Run the application
 
 ```bash
@@ -23,3 +25,16 @@ docker run -p 3000:3000 motus_image
 ```bash
 docker-compose up
 ```
+
+## Play Motus
+
+In your browser type :
+```
+localhost:3000
+```
+
+
+flowchart LR
+    A[User] --> |play| B{Motus}
+    A --> |getScore| C[BDD]
+    A --> |setScore| C[BDD]
