@@ -1,6 +1,10 @@
 // public/client.js
+var nbTry = 0;
+
 $(document).ready(function(){
     $('#guessForm').on('submit', function(event){
+        nbTry++;
+
         event.preventDefault(); // Prevent default form submission
 
         // Get user guess
@@ -10,7 +14,8 @@ $(document).ready(function(){
         $.get('/guess/' + guess, function(result){
             // Display the result
             $('#result').html(result);
-        
+
         });
     });
 });
+

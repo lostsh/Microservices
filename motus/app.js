@@ -1,6 +1,9 @@
 const express = require('express')
 const fs = require('fs');
 const path = require('path');
+const request = require('request');
+
+const apiUrl_setscore = 'http://score-app:3001/setscore';
 const app = express()
 const port = 3000
 
@@ -64,6 +67,31 @@ app.get('/guess/:word', (req, res) => {
     // If the guess is correct, append a success message
     if (isCorrect) {
       result += '<p>Congratulations! You guessed the word!</p>';
+
+      // TODO : bien calculer le score
+      // TODO : faire un bouton pour voir le score
+
+      const requestData = {
+        player: 'User0',
+        score: 42
+      };
+
+      const options = {
+        url: apiUrl_setscore,
+        method: 'POST',
+        json: true,
+        body: requestData
+      };
+
+      request(options, (error, response, body) => {
+        if (error) {
+            console.error('Erreur :', error);
+        } else {
+            console.log('Code de statut :', response.statusCode);
+            console.log('Réponse :', body);
+        }
+      });
+
     }
 
   }
