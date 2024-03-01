@@ -11,7 +11,7 @@ services:
   loadbalancer:
     build: ./loadbalancer
     ports:
-      - "8080:80"  # Map HAProxy to port 80 on the host
+      - "8080:80"
     restart: always
 
   redis:
@@ -28,4 +28,20 @@ services:
       - "3001:3001"
     environment:
         - REDIS_URL=redis://redis:6379
+    restart: always
+
+  redis-auth:
+    image: redis:latest
+    ports:
+      - "16380:6379"
+    volumes:
+      - ./redis-auth/data:/data
+    restart: always
+
+  auth-app:
+    build: ./auth
+    ports:
+      - "3003:3003"
+    environment:
+        - REDIS_URL=redis://redis-auth:6379
     restart: always
