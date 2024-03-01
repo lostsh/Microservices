@@ -1,2 +1,3 @@
 node_modules/*
-redis/data/redis/dump.rdb
+redis/*
+redis-auth/*
