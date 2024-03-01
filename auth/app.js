@@ -21,6 +21,19 @@ app.use(session({
 
 app.use(express.json());
 
+// Authorization endpoint
+app.get('/authorize', (req, res) => {
+    const { clientid, redirect_uri } = req.query;
+
+    if (clientid != 'motus') {
+        return res.status(400).send('Invalid client ID');
+    }
+
+    // Redirect to login page
+    const redirectUrl = 'http://localhost:3003/login.html?client_id=' + clientid + '&redirect_uri=' + redirect_uri;
+    res.redirect(redirectUrl);
+});
+
 const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:16380'
 
 console.log('REDIS_URL:', REDIS_URL);
@@ -75,7 +88,19 @@ redisClient.connect().then(() => {
             if (reply === hashedPassword) {
                 // Username and password match
                 req.session.user = username;
-                res.json({ message: "Login successful" });
+               res.json({ message: "Login successful" });
+
+                // Generate a token (you can use JWT or any other token generation method)
+                const token = 'some_generated_token';
+
+                // Redirect back to the client with the token appended as a query parameter
+                const { client_id, redirect_uri } = req.query;
+                const redirectUrl = `${redirect_uri}?code=${token}&username=${username}`;
+                console.log('Redirecting to:', redirectUrl);
+                //res.redirect(redirectUrl);
+
+                // TODO : stocker l'url callback dans les données de session
+
             } else {
                 // Incorrect username or password
                 res.status(401).json({ message: "Incorrect username or password" });
@@ -86,6 +111,14 @@ redisClient.connect().then(() => {
         });
     });
 });
+
+app.get('/redirect', (req, res) => {
+    // Handle the redirect URL
+
+    // TODO : récupérer l'url callback depuis les données de session pour faire le redirect
+
+    res.redirect('http://localhost:3000');
+  });
 
 // Middleware to check if user is logged in
 app.use((req, res, next) => {

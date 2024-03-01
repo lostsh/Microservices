@@ -1,4 +1,5 @@
-const express = require('express')
+const express = require('express');
+const session = require('express-session');
 const fs = require('fs');
 const path = require('path');
 const request = require('request');
@@ -9,6 +10,19 @@ const port = 3000
 
 const wordListPath = path.join(__dirname, 'liste_francais_utf8.txt');
 const wordList = fs.readFileSync(wordListPath, 'utf8').split('\n');
+
+// Set up session middleware
+app.use(session({
+  secret: 's3Cur3',
+  name: 'sessionId',
+  cookie: {
+    httpOnly: true, 
+    path: '/',
+    clientid: 'motus', 
+    redirect_uri: 'http://localhost:3000',
+    expires: new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+  }
+}));
 
 // Function to generate a random number based on the current date
 function generateRandomNumber() {
@@ -104,6 +118,27 @@ app.get('/changeSeed/:seed', (req, res) => {
   const newSeed = req.params.seed;
   // Handle the new seed value (You can modify generateRandomNumber() to use this new seed)
   res.send(`Seed value changed to: ${newSeed}`);
+});
+
+// Middleware to check if user is logged in
+app.use((req, res, next) => {
+  if (req.session.user
+    || req.path === '/login.html' 
+    || req.path === '/login' 
+    || req.path === '/session' 
+    || req.path === '/register' 
+    || req.path === '/register.html') {
+    next();
+  } else {
+    // User is not logged in, redirect to authentication server
+    const authServerUrl = 'http://localhost:3003/authorize';
+    // Redirect to authentication server with OpenID parameters
+    const redirectUrl = `${authServerUrl}?clientid=${req.session.cookie.clientid}&redirect_uri=${req.session.cookie.redirect_uri}`;
+    console.log('Redirecting to:', redirectUrl);
+    return res.redirect(redirectUrl);
+
+    // TODO : mettre à jour les données de session + faire le bail du token
+  }
 });
 
 // Serve static files

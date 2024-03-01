@@ -21,16 +21,18 @@
 
     <div id="errorMessage" style="color: red;"></div>
 
-    <p>Don't have an account? <a href="/register.html">Register here</a></p>
-
     <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const clientId = urlParams.get('client_id');
+        const redirectUri = urlParams.get('redirect_uri');
+
         document.getElementById('loginForm').addEventListener('submit', async function(event) {
             event.preventDefault();
 
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
 
-            const response = await fetch('/login', {
+            const response = await fetch('/login?client_id=' + clientId + '&redirect_uri=' + redirectUri, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -43,7 +45,7 @@
 
             if (response.ok) {
                 // Login successful, redirect to index.html
-                window.location.href = '/index.html';
+                window.location.href = '/redirect';
             } else {
                 // Display error message
                 document.getElementById('errorMessage').innerText = data.message;
