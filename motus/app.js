@@ -40,6 +40,13 @@ function getWordForDay(randomNumber) {
 
 // Endpoint to handle the word guess
 app.get('/guess/:word', (req, res) => {
+  const { code, username } = req.query
+  req.session.user = username;
+  req.session.token = code;
+  console.log('User:', req.session.user);
+  console.log('Token:', req.session.token);
+  console.log('Guess:', req.params.word);
+
   let guess = req.params.word.toLowerCase().trim();
   const randomNumber = generateRandomNumber();
   let wordForDay = getWordForDay(randomNumber).toLowerCase().trim();
@@ -122,13 +129,22 @@ app.get('/changeSeed/:seed', (req, res) => {
 
 // Middleware to check if user is logged in
 app.use((req, res, next) => {
+
+  // After the user is authenticated, the authentication server will redirect back to the client with the token appended as a query parameter
+  const { code, username } = req.query
+  req.session.user = username;
+  req.session.token = code;
+  console.log('User:', req.session.user);
+
   if (req.session.user
     || req.path === '/login.html' 
     || req.path === '/login' 
     || req.path === '/session' 
     || req.path === '/register' 
     || req.path === '/register.html') {
+
     next();
+
   } else {
     // User is not logged in, redirect to authentication server
     const authServerUrl = 'http://localhost:3003/authorize';
@@ -137,7 +153,7 @@ app.use((req, res, next) => {
     console.log('Redirecting to:', redirectUrl);
     return res.redirect(redirectUrl);
 
-    // TODO : mettre à jour les données de session + faire le bail du token
+    // TODO : faire le bail du token
   }
 });
 

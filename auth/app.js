@@ -88,19 +88,16 @@ redisClient.connect().then(() => {
             if (reply === hashedPassword) {
                 // Username and password match
                 req.session.user = username;
-               res.json({ message: "Login successful" });
-
                 // Generate a token (you can use JWT or any other token generation method)
                 const token = 'some_generated_token';
 
                 // Redirect back to the client with the token appended as a query parameter
                 const { client_id, redirect_uri } = req.query;
                 const redirectUrl = `${redirect_uri}?code=${token}&username=${username}`;
-                console.log('Redirecting to:', redirectUrl);
                 //res.redirect(redirectUrl);
+                req.session.redirect_uri = redirectUrl;
 
-                // TODO : stocker l'url callback dans les données de session
-
+                res.json({ message: "Login successful" });
             } else {
                 // Incorrect username or password
                 res.status(401).json({ message: "Incorrect username or password" });
@@ -114,10 +111,8 @@ redisClient.connect().then(() => {
 
 app.get('/redirect', (req, res) => {
     // Handle the redirect URL
-
-    // TODO : récupérer l'url callback depuis les données de session pour faire le redirect
-
-    res.redirect('http://localhost:3000');
+    console.log('Redirecting to:', req.session.redirect_uri);
+    res.redirect(req.session.redirect_uri);
   });
 
 // Middleware to check if user is logged in

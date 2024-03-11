@@ -3,6 +3,8 @@ var nbTry = 0;
 
 $(document).ready(function(){
     $('#guessForm').on('submit', function(event){
+        const { code, username } = req.query
+
         nbTry++;
 
         event.preventDefault(); // Prevent default form submission
@@ -10,8 +12,11 @@ $(document).ready(function(){
         // Get user guess
         var guess = $('#guess').val();
 
+        url = '/guess/' + guess + '?username=' + username + '&code=' + code;
+        //url = '/guess/' + guess;
+
         // Fetch word for the day from server
-        $.get('/guess/' + guess, function(result){
+        $.get(url, function(result){
             // Display the result
             $('#result').html(result);
 
