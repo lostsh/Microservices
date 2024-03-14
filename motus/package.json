@@ -9,7 +9,10 @@
     "dependencies": {
       "express": "^4.17.1",
       "request": "^2.88.2",
-      "express-session": "^1.17.2"
+      "express-session": "^1.17.2",
+      "winston": "^3.3.3",
+      "winston-loki": "^1.0.0",
+      "prom-client": "^13.0.0"
     },
     "devDependencies": {
       "mocha": "^9.0.0"

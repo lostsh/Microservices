@@ -14,13 +14,16 @@ $(document).ready(function(){
 
         url = '/guess/' + guess + '?username=' + username + '&code=' + code;
         //url = '/guess/' + guess;
+        console.log(url);
 
         // Fetch word for the day from server
+        /*
         $.get(url, function(result){
             // Display the result
             $('#result').html(result);
 
         });
+        */
     });
 });
 

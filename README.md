@@ -38,6 +38,10 @@ If you are not connected, it will redirect you to authentification service. Once
   
   The response is a html with the result of the comparison
 
+- `metrics` : to get the metrics of request done and the number of successful authentication
+  
+  The response is a json with the metrics or an error message
+
 #### Authentification APIs
 - `authorize` : to check if the client id is valid
   
@@ -79,6 +83,18 @@ If you are not connected, it will redirect you to authentification service. Once
 ### Store data
 - The `auth` app uses a redis database to store the users' passwords
 - The `score` app uses a redis database to store the users' scores
+
+### Monitoring details 
+
+Grafana is running on port `3004` and Prometheus is running on port `9090`
+
+Logs are stored in a loki database running on port `3100`
+
+If you want to visualize the logs, you can go to `localhost:3004` and add a new datasource with the url `http://loki:3100`
+
+To visualize the metrics, you can go to `localhost:3004` and add a new datasource with the url `http://prometheus:9090`
+
+Node exporter is running on port `9100`, you can vizualize the metrics on `http://localhost:9100/metrics`
 
 ### API Organisation
 

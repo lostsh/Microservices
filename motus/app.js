@@ -3,6 +3,10 @@ const session = require('express-session');
 const fs = require('fs');
 const path = require('path');
 const request = require('request');
+const { createLogger, transports } = require("winston");
+const LokiTransport = require("winston-loki");
+const prometheus = require('prom-client');
+
 
 const apiUrl_setscore = 'http://score-app:3001/setscore';
 const app = express()
@@ -10,6 +14,41 @@ const port = 3000
 
 const wordListPath = path.join(__dirname, 'liste_francais_utf8.txt');
 const wordList = fs.readFileSync(wordListPath, 'utf8').split('\n');
+
+const loki_uri = process.env.LOKI || "http://127.0.0.1:3100";
+
+// Create Prometheus metrics
+const httpRequestCounter = new prometheus.Counter({
+  name: 'http_requests_total',
+  help: 'Total number of HTTP requests',
+});
+
+const loginCounter = new prometheus.Counter({
+  name: 'login_total',
+  help: 'Total number of successful logins',
+});
+
+// Register metrics with Prometheus
+prometheus.register.registerMetric(httpRequestCounter);
+prometheus.register.registerMetric(loginCounter);
+
+// Middleware to count HTTP requests
+app.use((req, res, next) => {
+  httpRequestCounter.inc();
+  next();
+});
+
+// Metrics endpoint
+app.get('/metrics', async (req, res) => {
+  try {
+    const metrics = await prometheus.register.metrics();
+    res.set('Content-Type', prometheus.register.contentType);
+    res.end(metrics);
+  } catch (error) {
+    console.error('Error generating metrics:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
 
 // Set up session middleware
 app.use(session({
@@ -90,7 +129,7 @@ app.get('/guess/:word', (req, res) => {
       result += '<p>Congratulations! You guessed the word!</p>';
 
       // TODO : bien calculer le score
-      // TODO : faire un bouton pour voir le score
+      // TODO : afficher le score une fois sauvegardé
 
       const requestData = {
         player: 'User0',
@@ -120,21 +159,26 @@ app.get('/guess/:word', (req, res) => {
   res.send(result);
 });
 
-// Endpoint to change seed value
-app.get('/changeSeed/:seed', (req, res) => {
-  const newSeed = req.params.seed;
-  // Handle the new seed value (You can modify generateRandomNumber() to use this new seed)
-  res.send(`Seed value changed to: ${newSeed}`);
-});
-
 // Middleware to check if user is logged in
 app.use((req, res, next) => {
+
+  const logger = createLogger({
+    transports: [
+      new LokiTransport({
+        host: loki_uri
+      })
+    ]
+  });
+  
+  logger.info({ message: 'URL '+req.url , labels: { 'url': req.url, 'user':req.session.user } })
+  
+  module.exports = logger;
 
   // After the user is authenticated, the authentication server will redirect back to the client with the token appended as a query parameter
   const { code, username } = req.query
   req.session.user = username;
   req.session.token = code;
-  console.log('User:', req.session.user);
+  console.log('Debug User (from motusapp):', req.session.user);
 
   if (req.session.user
     || req.path === '/login.html' 
@@ -143,19 +187,26 @@ app.use((req, res, next) => {
     || req.path === '/register' 
     || req.path === '/register.html') {
 
-    next();
+    console.log('\t[+] Find user:', req.session.user);
+    loginCounter.inc();
 
   } else {
+    console.log('\t[-] No user logged:', req.session.user);
     // User is not logged in, redirect to authentication server
     const authServerUrl = 'http://localhost:3003/authorize';
     // Redirect to authentication server with OpenID parameters
     const redirectUrl = `${authServerUrl}?clientid=${req.session.cookie.clientid}&redirect_uri=${req.session.cookie.redirect_uri}`;
     console.log('Redirecting to:', redirectUrl);
     return res.redirect(redirectUrl);
-
-    // TODO : faire le bail du token
   }
+
+  console.log('\t[=] Auth ok now exec the app:', req.session.user);
+  res.status(200).send('Hiii <3');
+  return next();
 });
+
+
+console.log('\t[*] App is happy and runing :)');
 
 // Serve static files
 app.use(express.static('public'));

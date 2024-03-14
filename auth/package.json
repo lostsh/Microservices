@@ -10,7 +10,8 @@
         "express": "^4.17.1",
         "express-session": "^1.17.2",
         "redis": "^4.6.13",
-        "crypto": "^1.0.1"
+        "crypto": "^1.0.1",
+        "jsonwebtoken": "^8.5.1"
     },
     "devDependencies": {
       "mocha": "^9.0.0"

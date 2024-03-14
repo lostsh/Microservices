@@ -2,6 +2,7 @@ const express = require('express');
 const session = require('express-session');
 const redis = require('redis');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 
@@ -88,11 +89,14 @@ redisClient.connect().then(() => {
             if (reply === hashedPassword) {
                 // Username and password match
                 req.session.user = username;
+
                 // Generate a token (you can use JWT or any other token generation method)
-                const token = 'some_generated_token';
+                let jwtSecretKey = 'some_generated_token';
+                const token = jwt.sign({userId: username}, jwtSecretKey);
 
                 // Redirect back to the client with the token appended as a query parameter
-                const { client_id, redirect_uri } = req.query;
+                const { client_id, redirect_uri } = req.query;                
+
                 const redirectUrl = `${redirect_uri}?code=${token}&username=${username}`;
                 //res.redirect(redirectUrl);
                 req.session.redirect_uri = redirectUrl;
