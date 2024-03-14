@@ -91,14 +91,14 @@ redisClient.connect().then(() => {
                 req.session.user = username;
 
                 // Generate a token (you can use JWT or any other token generation method)
-                let jwtSecretKey = 'some_generated_token';
-                const token = jwt.sign({userId: username}, jwtSecretKey);
+                //let jwtSecretKey = 'some_generated_token';
+                //const token = jwt.sign({userId: username}, jwtSecretKey);
+                const token = 'some_generated_token'
 
                 // Redirect back to the client with the token appended as a query parameter
                 const { client_id, redirect_uri } = req.query;                
 
-                const redirectUrl = `${redirect_uri}?code=${token}&username=${username}`;
-                //res.redirect(redirectUrl);
+                const redirectUrl = `${redirect_uri}?code=${token}`;
                 req.session.redirect_uri = redirectUrl;
 
                 res.json({ message: "Login successful" });
@@ -118,6 +118,18 @@ app.get('/redirect', (req, res) => {
     console.log('Redirecting to:', req.session.redirect_uri);
     res.redirect(req.session.redirect_uri);
   });
+
+// Endpoint for token exchange
+app.post('/token', (req, res) => {
+    const { code } = req.body;
+    if (code == 'some_generated_token') {
+        // TODO : regarder dans la base de données d'authentification pour trouver le username associé au code
+        res.json({ username: 'justine' });
+    } else {
+        res.status(400).json({ message: "Invalid code" });
+    }
+}
+);
 
 // Middleware to check if user is logged in
 app.use((req, res, next) => {

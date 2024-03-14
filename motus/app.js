@@ -9,6 +9,7 @@ const prometheus = require('prom-client');
 
 
 const apiUrl_setscore = 'http://score-app:3001/setscore';
+const apiUrl_token = 'http://auth-app:3003/token';
 const app = express()
 const port = 3000
 
@@ -16,6 +17,14 @@ const wordListPath = path.join(__dirname, 'liste_francais_utf8.txt');
 const wordList = fs.readFileSync(wordListPath, 'utf8').split('\n');
 
 const loki_uri = process.env.LOKI || "http://127.0.0.1:3100";
+
+const logger = createLogger({
+  transports: [
+    new LokiTransport({
+      host: loki_uri
+    })
+  ]
+});
 
 // Create Prometheus metrics
 const httpRequestCounter = new prometheus.Counter({
@@ -58,7 +67,7 @@ app.use(session({
     httpOnly: true, 
     path: '/',
     clientid: 'motus', 
-    redirect_uri: 'http://localhost:3000',
+    redirect_uri: 'http://localhost:3000/callback',
     expires: new Date(Date.now() + 60 * 60 * 1000) // 1 hour
   }
 }));
@@ -79,12 +88,6 @@ function getWordForDay(randomNumber) {
 
 // Endpoint to handle the word guess
 app.get('/guess/:word', (req, res) => {
-  const { code, username } = req.query
-  req.session.user = username;
-  req.session.token = code;
-  console.log('User:', req.session.user);
-  console.log('Token:', req.session.token);
-  console.log('Guess:', req.params.word);
 
   let guess = req.params.word.toLowerCase().trim();
   const randomNumber = generateRandomNumber();
@@ -159,26 +162,39 @@ app.get('/guess/:word', (req, res) => {
   res.send(result);
 });
 
+// Endpoint for callback from authentication server
+app.get('/callback', (req, res) => {
+  const { code } = req.query
+  req.session.token = code;
+  console.log('Token:', req.session.token);
+  // call /token to get the username associated to the code
+  const options = {
+    url: apiUrl_token,
+    method: 'POST',
+    json: true,
+    body: {
+      code: code
+    }
+  };
+  request(options, (error, response, body) => {
+    if (error) {
+      console.error('Error:', error);
+    } else {
+      console.log('Status code:', response.statusCode);
+      console.log('Body:', body);
+      req.session.user = body.username;
+      console.log('User:', req.session.user);
+      res.redirect('/');
+    }
+  });
+});
+
 // Middleware to check if user is logged in
 app.use((req, res, next) => {
-
-  const logger = createLogger({
-    transports: [
-      new LokiTransport({
-        host: loki_uri
-      })
-    ]
-  });
   
   logger.info({ message: 'URL '+req.url , labels: { 'url': req.url, 'user':req.session.user } })
   
   module.exports = logger;
-
-  // After the user is authenticated, the authentication server will redirect back to the client with the token appended as a query parameter
-  const { code, username } = req.query
-  req.session.user = username;
-  req.session.token = code;
-  console.log('Debug User (from motusapp):', req.session.user);
 
   if (req.session.user
     || req.path === '/login.html' 
@@ -201,7 +217,6 @@ app.use((req, res, next) => {
   }
 
   console.log('\t[=] Auth ok now exec the app:', req.session.user);
-  res.status(200).send('Hiii <3');
   return next();
 });
 
