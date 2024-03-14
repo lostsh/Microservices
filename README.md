@@ -81,7 +81,7 @@ If you are not connected, it will redirect you to authentification service. Once
   The response is a message to confirm the score update or an error message
 
 ### Store data
-- The `auth` app uses a redis database to store the users' passwords
+- The `auth` app uses a redis database to store the users' passwords and codes
 - The `score` app uses a redis database to store the users' scores
 
 ### Monitoring details 

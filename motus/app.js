@@ -166,7 +166,8 @@ app.get('/guess/:word', (req, res) => {
 app.get('/callback', (req, res) => {
   const { code } = req.query
   req.session.token = code;
-  console.log('Token:', req.session.token);
+  console.log('Received code:', code);
+
   // call /token to get the username associated to the code
   const options = {
     url: apiUrl_token,
@@ -176,14 +177,13 @@ app.get('/callback', (req, res) => {
       code: code
     }
   };
+
   request(options, (error, response, body) => {
     if (error) {
       console.error('Error:', error);
     } else {
-      console.log('Status code:', response.statusCode);
-      console.log('Body:', body);
       req.session.user = body.username;
-      console.log('User:', req.session.user);
+      loginCounter.inc();
       res.redirect('/');
     }
   });
@@ -204,7 +204,6 @@ app.use((req, res, next) => {
     || req.path === '/register.html') {
 
     console.log('\t[+] Find user:', req.session.user);
-    loginCounter.inc();
 
   } else {
     console.log('\t[-] No user logged:', req.session.user);

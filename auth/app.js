@@ -3,6 +3,7 @@ const session = require('express-session');
 const redis = require('redis');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const uuid = require('uuid');
 
 const app = express();
 
@@ -63,13 +64,22 @@ redisClient.connect().then(() => {
                 // Hash the password before storing it in Redis
                 const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
 
+                const randomCode = uuid.v4();
+
+                redisClient.set('user:' + username + ':code', randomCode).then(() => {
+                    console.log('Code stored successfully:', reply);
+                }).catch((err) => {
+                    console.error('Error storing code:', err);
+                });
+
                 // Username doesn't exist, store it in Redis
-                redisClient.set(username, hashedPassword).then(() => {
+                redisClient.set('user:' + username + ':password', hashedPassword).then(() => {
                     res.status(201).json({ message: "Registration successful" });
                 }).catch((err) => {
                     console.error(err);
                     res.status(500).json({ message: 'Internal server error' });
                 });
+
             }
         }).catch((err) => {
             console.error(err);
@@ -85,23 +95,26 @@ redisClient.connect().then(() => {
         const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
 
         // Check if the provided username exists in Redis
-        redisClient.get(username).then((reply) => {
+        redisClient.get('user:' + username + ':password').then((reply) => {
             if (reply === hashedPassword) {
                 // Username and password match
                 req.session.user = username;
 
-                // Generate a token (you can use JWT or any other token generation method)
-                //let jwtSecretKey = 'some_generated_token';
-                //const token = jwt.sign({userId: username}, jwtSecretKey);
-                const token = 'some_generated_token'
+                // Get the code from redis 
+                redisClient.get('user:' + username + ':code').then((reply) => {
+                    const randomCode = reply;
+                    // Redirect back to the client with the token appended as a query parameter
+                    const { client_id, redirect_uri } = req.query;                
 
-                // Redirect back to the client with the token appended as a query parameter
-                const { client_id, redirect_uri } = req.query;                
+                    const redirectUrl = `${redirect_uri}?code=${randomCode}`;
+                    req.session.redirect_uri = redirectUrl;
 
-                const redirectUrl = `${redirect_uri}?code=${token}`;
-                req.session.redirect_uri = redirectUrl;
+                    res.json({ message: "Login successful" });
+                }).catch((err) => {
+                    console.error(err);
+                    res.status(500).json({ message: 'Internal server error' });
+                });
 
-                res.json({ message: "Login successful" });
             } else {
                 // Incorrect username or password
                 res.status(401).json({ message: "Incorrect username or password" });
@@ -122,12 +135,33 @@ app.get('/redirect', (req, res) => {
 // Endpoint for token exchange
 app.post('/token', (req, res) => {
     const { code } = req.body;
-    if (code == 'some_generated_token') {
-        // TODO : regarder dans la base de données d'authentification pour trouver le username associé au code
-        res.json({ username: 'justine' });
-    } else {
-        res.status(400).json({ message: "Invalid code" });
-    }
+
+    redisClient.keys('user:*:code').then((reply) => {
+
+        const keys = reply;
+
+        let found = false;
+
+        keys.forEach(key => {
+            redisClient.get(key).then((storedCode) => {
+                if (storedCode === code) {
+                    const username = key.split(':')[1];
+                    res.json({ username: username });
+                    found = true;
+                }
+                if (!found && keys.indexOf(key) === keys.length - 1) {
+                    res.status(400).json({ message: "Invalid code" });
+                }
+            }).catch((err) => {
+                console.error(err);
+                res.status(500).json({ message: 'Internal server error' });
+            });
+        });
+        
+    }).catch((err) => {
+        console.error(err);
+        res.status(500).json({ message: 'Internal server error' });
+    });
 }
 );
 
