@@ -65,6 +65,8 @@ It specifies the `load balancing` algorithm. Here, it's set to round-robin, mean
   
   The response is a html with the result of the comparison
 
+  A successful guess will register the score in the score database through the score service and will display the score on the app.
+
 <div style="display: flex;">
     <img src="img/guess_result_1.png" alt="/guess result 1" style="width: 45%; margin-right: 5px;">
     <img src="img/guess_result_2.png" alt="/guess result 2" style="width: 45%; margin-left: 5px;">
@@ -75,7 +77,7 @@ It specifies the `load balancing` algorithm. Here, it's set to round-robin, mean
   The response is a json with the metrics or an error message
 
 <div style="text-align: center;">
-  <img src="img/metrics_result.png" alt="/mtrics result 1" style="display: block; margin: auto; width: 60%;">
+  <img src="img/metrics_result.png" alt="/metrics result 1" style="display: block; margin: auto; width: 60%;">
 </div>
 
 *Authentification APIs*
@@ -92,6 +94,10 @@ It specifies the `load balancing` algorithm. Here, it's set to round-robin, mean
 
   The response is a message to confirm the registration or an error message
 
+<div style="text-align: center;">
+  <img src="img/register.png" alt="/register" style="display: block; margin: auto; width: 50%;">
+</div>
+
 - `/login` : to log in the user
   
   The params are `username`, `password`, `clientid` and `redirect_uri`
@@ -99,6 +105,11 @@ It specifies the `load balancing` algorithm. Here, it's set to round-robin, mean
   The response is a message to confirm the login or an error message
 
   The redirection url is stored in the sessions parameters if the login is successful
+
+<div style="display: flex;">
+    <img src="img/login.png" alt="/login 1" style="width: 45%; margin-right: 5px;">
+    <img src="img/login_wrong.png" alt="/login 2" style="width: 45%; margin-left: 5px;">
+</div>
 
 - `/redirect` : to redirect the user to the main app
   

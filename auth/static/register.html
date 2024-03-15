@@ -4,10 +4,83 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #loginForm {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 300px;
+        }
+
+        #registerForm {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 300px;
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: calc(100% - 12px);
+            padding: 6px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        button[type="submit"] {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+
+        #errorMessage {
+            color: red;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        p {
+            margin-top: 20px;
+            text-align: center;
+        }
+    </style>
+
 </head>
 <body>
-    <h2>Register</h2>
     <form id="registerForm">
+        <h2>Register</h2>
         <div>
             <label for="username">Username:</label>
             <input type="text" id="username" name="username" required>
@@ -17,9 +90,8 @@
             <input type="password" id="password" name="password" required>
         </div>
         <button type="submit">Register</button>
+        <div id="errorMessage" style="color: red;"></div>
     </form>
-
-    <div id="errorMessage" style="color: red;"></div>
 
     <script>
         document.getElementById('registerForm').addEventListener('submit', async function(event) {
@@ -41,7 +113,7 @@
             if (response.ok) {
                 // Registration successful
                 alert(data.message);
-                window.location.href = 'http://localhost:3000'; // Redirect to login page
+                window.location.href = 'http://localhost:3000'; // Redirect to main page
             } else {
                 // Display error message
                 document.getElementById('errorMessage').innerText = data.message;
