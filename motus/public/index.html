@@ -4,18 +4,66 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Motus Game</title>
-    <link rel="stylesheet" href="/styles.css"> <!-- Link CSS -->
+    <link rel="stylesheet" href="/styles.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
+
 <body>
+
     <h1>Motus Game</h1>
+
+    <h1 id="wordLength"></h1>
+
     <form id="guessForm">
         <label for="guess">Enter your guess:</label>
         <input type="text" id="guess" name="guess">
         <button type="submit">Submit</button>
+        <div id="tryNumber"></div>
     </form>
+    <div id="score"></div>
+
     <div id="result"></div>
 
-    <script src="/client.js"></script> <!-- Link JavaScript -->
+    <button id="specialButton" style="display: none;">Special Button</button>
+
+    <ul id="scoresList"></ul>
+
+    <script>
+        // Fonction pour récupérer et afficher les scores d'un joueur spécifique
+        async function displayScores(playerScore) {
+            if (playerScore !== null) { // Vérifie si le score a été récupéré
+                // Séparation de la chaîne avec les guillemets
+                const scoreParts = playerScore.split('"');
+                if (scoreParts.length >= 8) { // Vérifie s'il y a au moins 8 éléments
+                    // Séparation avec le point-virgule et récupération des éléments
+                    const scoreData = scoreParts[7].split(';');
+                    const scoresList = document.getElementById('scoresList');
+    
+                    scoresList.innerHTML = ''; // Efface la liste précédente des scores
+    
+                    // Affiche les différentes valeurs
+                    const scoreItem = document.createElement('li');
+                    scoreItem.textContent = `Player: ${scoreParts[3]}`;
+                    scoresList.appendChild(scoreItem);
+    
+                    const scoreItemMeanTry = document.createElement('li');
+                    const meanTryResult = parseFloat(scoreData[0]) / parseFloat(scoreData[2]);
+                    scoreItemMeanTry.textContent = `Mean try: ${meanTryResult.toFixed(2)}`;
+                    scoresList.appendChild(scoreItemMeanTry);
+    
+                    const scoreItemSuccess = document.createElement('li');
+                    scoreItemSuccess.textContent = `Success: ${scoreData[1]}`;
+                    scoresList.appendChild(scoreItemSuccess);
+    
+                    const scoreItemTimePlayed = document.createElement('li');
+                    scoreItemTimePlayed.textContent = `Time Played: ${scoreData[2]}`;
+                    scoresList.appendChild(scoreItemTimePlayed);
+                }
+            }
+        }
+    </script>
+    
+    
+    <script src="/client.js"></script>
 </body>
 </html>
