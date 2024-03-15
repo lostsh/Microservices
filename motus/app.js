@@ -9,6 +9,7 @@ const prometheus = require('prom-client');
 
 const app = express()
 
+const apiUrl_setscore = 'http://score-app:3001/setscore';
 const URL_SETSCORE = 'http://score-app:3001/setscore';
 const URL_TOKEN = 'http://auth-app:3003/token';
 const URL_AUTHORIZE = 'http://localhost:3003/authorize';
@@ -181,7 +182,7 @@ app.get('/guess/:word', (req, res) => {
       result += '<p>You failed, the word was:</p>' + wordForDay;
     }
 
-    if (isCorrect || tryNumber >6){
+if (isCorrect || tryNumber >6){
 
       let apiUrl_getscore = 'http://score-app:3001/getscore?player='+player;
  
