@@ -162,7 +162,7 @@ Node exporter is running on port `9100`, you can vizualize the metrics on `http:
 
 ```mermaid
 flowchart LR
-    A[user] --> B(motus)
+    A(HaProxy) --> B(motus)
     B --> |guess| B
     B --> |get_score| C(score)
     B -->|set_score| C
