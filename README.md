@@ -24,26 +24,63 @@ If you are not connected, it will redirect you to authentification service. Once
 ### Details about servers and ports 
 
 - The main app `motus` is running on port `3000`
+- The `Load Balancer` server is running on port `8080`
 - The `authentification` app is running on port `3003`
 - The `redis-auth` database is running on port `16380`
 - The `score` app is running on port `3001`
 - The `redis-score` database is running on port `16379`
+- Grafana is running on port `3004`
+- Prometheus is running on port `9090`
+- Loki is running on port `3100`
+- Node exporter is running on port `9100`
+
+### HaProxy configuration
+
+It specifies the `load balancing` algorithm. Here, it's set to round-robin, meaning requests are distributed evenly among two servers.
+  
+  ```haproxy
+  frontend http_front
+    bind *:80
+    default_backend http_back
+
+  backend http_back
+    balance roundrobin
+    server motus1 motus:3000 check
+    server motus2 motus:3000 check
+  ```
 
 ### Details about APIs
 
-#### Motus APIs
+*Motus APIs*
+
+- `/callback` : to get the `username` from the authentification service using the `code` provided by the authentification service
+
+  The param is `code` the token provided by the authentification service
+  
+  The response is a redirection to the main app with the `username` saved in the session parameters
+
 - `/guess` : to compare the user's guess with the word to find and call the /setscore API if the user found the word.
   
   The param is `word` the user's guess
   
   The response is a html with the result of the comparison
 
-- `metrics` : to get the metrics of request done and the number of successful authentication
+<div style="display: flex;">
+    <img src="img/guess_result_1.png" alt="/guess result 1" style="width: 45%; margin-right: 5px;">
+    <img src="img/guess_result_2.png" alt="/guess result 2" style="width: 45%; margin-left: 5px;">
+</div>
+
+- `/metrics` : to get the metrics of request done and the number of successful authentication. These metrics are calculated by the prometheus server.
   
   The response is a json with the metrics or an error message
 
-#### Authentification APIs
-- `authorize` : to check if the client id is valid
+<div style="text-align: center;">
+  <img src="img/metrics_result.png" alt="/mtrics result 1" style="display: block; margin: auto; width: 60%;">
+</div>
+
+*Authentification APIs*
+
+- `/authorize` : to check if the client id is valid
   
   The params are `clientid` and `redirect_uri` 
   
@@ -57,17 +94,26 @@ If you are not connected, it will redirect you to authentification service. Once
 
 - `/login` : to log in the user
   
-  The params are `username` and `password`
+  The params are `username`, `password`, `clientid` and `redirect_uri`
 
   The response is a message to confirm the login or an error message
 
+  The redirection url is stored in the sessions parameters if the login is successful
+
 - `/redirect` : to redirect the user to the main app
   
-  The redirect url is stor in the sessions parameters
+  The redirect url is stored in the sessions parameters
 
-  The response is a redirection to the main app with a token
+  The response is a redirection to the main app with a `token`
 
-#### Score APIs
+- `/token` : to get the username from the token
+  
+  The params are `token`
+
+  The response is the username
+
+*Score APIs*
+
 - `/getscore` : to get the user's score
   
   The params are `player`
@@ -75,13 +121,18 @@ If you are not connected, it will redirect you to authentification service. Once
   The response is the user's score
 
 - `/setscore` : to set the user's score
-- 
+
   The params are `player` and `score`
 
   The response is a message to confirm the score update or an error message
 
 ### Store data
 - The `auth` app uses a redis database to store the users' passwords and codes
+  
+  The passwords are hashed using the sha256 algorithm and they are saved under the form `user:username:password : hashed_password`
+
+  The codes are random numbers using the v4 algorithme and they are saved under the form `user:username:code : generatedCode`
+
 - The `score` app uses a redis database to store the users' scores
 
 ### Monitoring details 
@@ -108,7 +159,8 @@ flowchart LR
     B --> |authorize| D(auth)
     D --> F[redis-score]
     D --> |login / register| D
-    D --> |redirect| B
+    D --> |callback| B
+    B --> |token| D
 ```
 
 
