@@ -4,30 +4,28 @@ const redis = require('redis');
 const path = require('path');
 
 const app = express();
+
 const PORT = process.env.PORT || 3001;
 const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:16379'
-// Middleware
+
 app.use(bodyParser.json());
 
-// Create a Redis client
-console.log('REDIS_URL:', REDIS_URL);
 const redisClient = redis.createClient({url:REDIS_URL});
 
-// Redis error handling
 redisClient.on('error', (err) => {
   console.error('Redis Error:', err);
 });
 
 // Connect to Redis
 redisClient.connect().then(() => {
-  console.log('Connected to Redis');
+  console.log('Connected to Redis at:', REDIS_URL);
   
-  // Endpoint to set score for a player
+  /* ********** Set score endpoint ********** */
   app.post('/setscore', (req, res) => {
     const { player, score } = req.body;
     // Store score in Redis
     redisClient.set(player, score).then(() => {
-      console.log('Score set successfully');
+      console.log('Score set successfully for:', player, 'with score:', score);
       res.status(200).json({ message: 'Score updated successfully.' });
     }).catch((err) => {
       console.error('Error setting score:', err);
@@ -35,15 +33,16 @@ redisClient.connect().then(() => {
     });
   });
 
-  // Endpoint to get score for a player
+  /* ********** Get score endpoint ********** */
   app.get('/getscore', (req, res) => {
     const { player } = req.query;
     // Retrieve score from Redis
     redisClient.get(player).then((score) => {
       if (score !== null) {
-        console.log('Score retrieved successfully:', score);
+        console.log('Score retrieved successfully for:', player, 'with score:', score);
         res.status(200).json({ player, score });
       } else {
+        console.log('Score not found for:', player);
         res.status(404).json({ message: 'Score not found for the player.' });
       }
     }).catch((err) => {

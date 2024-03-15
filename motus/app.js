@@ -7,21 +7,22 @@ const { createLogger, transports } = require("winston");
 const LokiTransport = require("winston-loki");
 const prometheus = require('prom-client');
 
-
-const apiUrl_setscore = 'http://score-app:3001/setscore';
-const apiUrl_token = 'http://auth-app:3003/token';
 const app = express()
-const port = 3000
+
+const URL_SETSCORE = 'http://score-app:3001/setscore';
+const URL_TOKEN = 'http://auth-app:3003/token';
+const URL_AUTHORIZE = 'http://localhost:3003/authorize';
+const PORT = 3000
+const URL_LOKI = process.env.LOKI || "http://127.0.0.1:3100";
 
 const wordListPath = path.join(__dirname, 'liste_francais_utf8.txt');
 const wordList = fs.readFileSync(wordListPath, 'utf8').split('\n');
 
-const loki_uri = process.env.LOKI || "http://127.0.0.1:3100";
-
+// Create a logger configured to send logs to Loki
 const logger = createLogger({
   transports: [
     new LokiTransport({
-      host: loki_uri
+      host: URL_LOKI
     })
   ]
 });
@@ -37,7 +38,6 @@ const loginCounter = new prometheus.Counter({
   help: 'Total number of successful logins',
 });
 
-// Register metrics with Prometheus
 prometheus.register.registerMetric(httpRequestCounter);
 prometheus.register.registerMetric(loginCounter);
 
@@ -45,18 +45,6 @@ prometheus.register.registerMetric(loginCounter);
 app.use((req, res, next) => {
   httpRequestCounter.inc();
   next();
-});
-
-// Metrics endpoint
-app.get('/metrics', async (req, res) => {
-  try {
-    const metrics = await prometheus.register.metrics();
-    res.set('Content-Type', prometheus.register.contentType);
-    res.end(metrics);
-  } catch (error) {
-    console.error('Error generating metrics:', error);
-    res.status(500).send('Internal Server Error');
-  }
 });
 
 // Set up session middleware
@@ -86,29 +74,68 @@ function getWordForDay(randomNumber) {
   return wordList[index];
 }
 
-// Endpoint to handle the word guess
+/* ********** Metrics endpoint ********** */
+app.get('/metrics', async (req, res) => {
+  try {
+    const metrics = await prometheus.register.metrics();
+    res.set('Content-Type', prometheus.register.contentType);
+    res.end(metrics);
+  } catch (error) {
+    console.error('Error generating metrics:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+/* ********** Callback endpoint ********** */
+app.get('/callback', (req, res) => {
+  const { code } = req.query
+  req.session.token = code;
+
+  console.log('Received code:', code);
+
+  // call /token to get the username associated to the code
+  const options = {
+    url: URL_TOKEN,
+    method: 'POST',
+    json: true,
+    body: {
+      code: code
+    }
+  };
+
+  request(options, (error, response, body) => {
+    if (error) {
+      console.error('Error:', error);
+    } else {
+      req.session.user = body.username;
+      console.log('User:', body.username);
+      // Count the login
+      loginCounter.inc();
+      // Redirect to the main page
+      res.redirect('/');
+    }
+  });
+});
+
+/* ********** Guess endpoint ********** */
 app.get('/guess/:word', (req, res) => {
 
   let guess = req.params.word.toLowerCase().trim();
   const randomNumber = generateRandomNumber();
   let wordForDay = getWordForDay(randomNumber).toLowerCase().trim();
-
-  console.log('Word for the day:', wordForDay);
-
-  // Perform Motus algorithm to check the guess
   var result = '';
 
+  console.log('Word for the day:', wordForDay);
+  console.log('Guess:', guess);
+
   if (typeof wordForDay === 'undefined') {
-    result = 'Failed to fetch word for the day.'; // Exit the function
+    result = 'Failed to fetch word for the day.';
 
   } else {
     
-    // Pad wordForDay with spaces if it's shorter than guess
       if (wordForDay.length < guess.length) {
         wordForDay += ' '.repeat(guess.length - wordForDay.length);
     }
-
-    // Pad guess with spaces if it's shorter than wordForDay
     else if (guess.length < wordForDay.length) {
         guess += ' '.repeat(wordForDay.length - guess.length);
     }
@@ -129,18 +156,19 @@ app.get('/guess/:word', (req, res) => {
 
     // If the guess is correct, append a success message
     if (isCorrect) {
+      console.log('Congratulations! You guessed the word!');
       result += '<p>Congratulations! You guessed the word!</p>';
 
       // TODO : bien calculer le score
       // TODO : afficher le score une fois sauvegardé
 
       const requestData = {
-        player: 'User0',
+        player: req.session.user,
         score: 42
       };
 
       const options = {
-        url: apiUrl_setscore,
+        url: URL_SETSCORE,
         method: 'POST',
         json: true,
         body: requestData
@@ -150,8 +178,7 @@ app.get('/guess/:word', (req, res) => {
         if (error) {
             console.error('Erreur :', error);
         } else {
-            console.log('Code de statut :', response.statusCode);
-            console.log('Réponse :', body);
+            console.log('Score saved:', body);
         }
       });
 
@@ -162,38 +189,11 @@ app.get('/guess/:word', (req, res) => {
   res.send(result);
 });
 
-// Endpoint for callback from authentication server
-app.get('/callback', (req, res) => {
-  const { code } = req.query
-  req.session.token = code;
-  console.log('Received code:', code);
-
-  // call /token to get the username associated to the code
-  const options = {
-    url: apiUrl_token,
-    method: 'POST',
-    json: true,
-    body: {
-      code: code
-    }
-  };
-
-  request(options, (error, response, body) => {
-    if (error) {
-      console.error('Error:', error);
-    } else {
-      req.session.user = body.username;
-      loginCounter.inc();
-      res.redirect('/');
-    }
-  });
-});
 
 // Middleware to check if user is logged in
 app.use((req, res, next) => {
   
   logger.info({ message: 'URL '+req.url , labels: { 'url': req.url, 'user':req.session.user } })
-  
   module.exports = logger;
 
   if (req.session.user
@@ -203,29 +203,24 @@ app.use((req, res, next) => {
     || req.path === '/register' 
     || req.path === '/register.html') {
 
-    console.log('\t[+] Find user:', req.session.user);
+    console.log('Find user:', req.session.user);
 
   } else {
-    console.log('\t[-] No user logged:', req.session.user);
-    // User is not logged in, redirect to authentication server
-    const authServerUrl = 'http://localhost:3003/authorize';
-    // Redirect to authentication server with OpenID parameters
-    const redirectUrl = `${authServerUrl}?clientid=${req.session.cookie.clientid}&redirect_uri=${req.session.cookie.redirect_uri}`;
+    console.log('No user logged:', req.session.user);
+    
+    const redirectUrl = `${URL_AUTHORIZE}?clientid=${req.session.cookie.clientid}&redirect_uri=${req.session.cookie.redirect_uri}`;
+
     console.log('Redirecting to:', redirectUrl);
     return res.redirect(redirectUrl);
   }
 
-  console.log('\t[=] Auth ok now exec the app:', req.session.user);
   return next();
 });
-
-
-console.log('\t[*] App is happy and runing :)');
 
 // Serve static files
 app.use(express.static('public'));
 
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
+app.listen(PORT, () => {
+  console.log(`Example app listening on port ${PORT}`)
 })
 
