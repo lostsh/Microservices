@@ -140,33 +140,32 @@ app.get('/callback', (req, res) => {
 let scoring = null;
 let isCorrect = false;
 // Endpoint to handle the word guess
-app.get('/guess/:word', async (req, res) => {
-  try {
-    tryNumber += 1;
-    let guess = req.params.word.toLowerCase().trim();
-    let wordForDay = getWordForDay(cachedRandomNumber).toLowerCase().trim();
+// Endpoint to handle the word guess
+app.get('/guess/:word', (req, res) => {
+  tryNumber += 1;
+  let guess = req.params.word.toLowerCase().trim();
+  let wordForDay = getWordForDay(cachedRandomNumber).toLowerCase().trim();
 
-    console.log('Word for the day:', wordForDay);
+  console.log('Word for the day:', wordForDay);
 
-    // Perform Motus algorithm to check the guess
-    var result = '';
-    let isCorrect = false;
+  // Perform Motus algorithm to check the guess
+  var result = '';
 
-    if (typeof wordForDay === 'undefined') {
-      result = 'Failed to fetch word for the day.'; // Exit the function
-    } else {
-      
-      // Pad wordForDay with spaces if it's shorter than guess
+  if (typeof wordForDay === 'undefined') {
+    result = 'Failed to fetch word for the day.'; // Exit the function
+  } else {
+    
+    // Pad wordForDay with spaces if it's shorter than guess
       if (wordForDay.length < guess.length) {
         wordForDay += ' '.repeat(guess.length - wordForDay.length);
-      }
+    }
 
-      // Pad guess with spaces if it's shorter than wordForDay
-      else if (guess.length < wordForDay.length) {
+    // Pad guess with spaces if it's shorter than wordForDay
+    else if (guess.length < wordForDay.length) {
         guess += ' '.repeat(wordForDay.length - guess.length);
-      }
+    }
 
-      for(var i = 0; i < wordForDay.length; i++) {
+    for(var i = 0; i < wordForDay.length; i++) {
         if (guess[i] === wordForDay[i]) {
           result += '<span style="background-color: green;">' + guess[i] + '</span>';
           isCorrect = true;
@@ -177,99 +176,81 @@ app.get('/guess/:word', async (req, res) => {
           result += guess[i];
           isCorrect = false;
         }
-      }
-      
-      //print the message of the end 
-      if (isCorrect) {
-        result += '<p>Congratulations! You guessed the word!</p>';
-      } else if (tryNumber > 6) {
-        result += '<p>You failed, the word was:</p>' + wordForDay;
-      }
-      
-      console.log('scoring1 : ', scoring);
-
-      if (isCorrect || tryNumber > 6) {
-        console.log('scoring2 : ', scoring);
-
-        await updateScoreAndFetch();
-        console.log('scoring3 : ', scoring);
-
-      }
-      console.log('scoring4 : ', scoring);
-
     }
-    
-    tryNumber1 = 'guess ' + tryNumber + '/7';
-    console.log('tryNumber : ', tryNumber);
-    console.log('scoring5 : ', scoring);
+    //print the message of the end 
+    if (isCorrect) {
+      result += '<p>Congratulations! You guessed the word!</p>';
+    }else if (tryNumber > 6){
+      result += '<p>You failed, the word was:</p>' + wordForDay;
+    }
 
-    res.send({result, isCorrect, tryNumber1, player, scoring});
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).send('Internal Server Error');
+    if (isCorrect || tryNumber >6){
+
+ 
+      const requestData = {
+        username: player,
+        score: tryNumber,
+        success: isCorrect
+      };
+
+      const options = {
+        url: apiUrl_setscore,
+        method: 'POST',
+        json: true,
+        body: requestData
+      };
+
+      request(options, (error, response, body) => {
+        if (error) {
+          console.error('Erreur :', error);
+        } else {
+          console.log('Code de statut :', response.statusCode);
+          console.log('Réponse :', body);
+        }
+      });
+
+
+    };
+    
   }
+  tryNumber1 = 'guess ' + tryNumber + '/7'
+  console.log('tryNumber : ', tryNumber);
+
+  res.send({result,isCorrect,tryNumber1,player,scoring});
 });
 
-async function updateScoreAndFetch() {
-  let apiUrl_getscore = 'http://score-app:3001/getscore?player=' + player;
+app.get(('/userstats'), (req, res) => {
+  if (isCorrect || tryNumber >6){
 
-  const requestData = {
-    username: player,
-    score: tryNumber,
-    success: isCorrect
-  };
+    let apiUrl_getscore = 'http://score-app:3001/getscore?player='+player;
 
-  const options = {
-    url: apiUrl_setscore,
-    method: 'GET',
-    json: true,
-    body: requestData
-  };
-  console.log('1');
-  await new Promise((resolve, reject) => {
-    request(options, (error, response, body) => {
-      if (error) {
-        console.error('Error:', error);
-        reject(error);
-      } else {
-        console.log('Status Code:', response.statusCode);
-        console.log('Response:', body);
-        resolve(body);
+    const options1 = {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
       }
-    });
-  });
-  console.log('2');
+    };
 
-
-  const options1 = {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  };
-  
-  console.log('3');
-
-  await new Promise((resolve, reject) => {
     const req = http.request(apiUrl_getscore, options1, (res) => {
-      console.log('Status Code:', res.statusCode);
+      console.log('Code de statut :', res.statusCode);
 
       res.on('data', (chunk) => {
-        console.log('Response:', chunk.toString());
+        console.log('Réponse :', chunk.toString());
         scoring = chunk.toString();
-        resolve();
+        console.log(scoring);
       });
     });
-    console.log('4');
 
     req.on('error', (error) => {
-      console.error('Error:', error);
-      reject(error);
+      console.error('Erreur :', error);
     });
 
     req.end();
-  });
-}
+  }
+  console.log("av",scoring);
+  res.send(scoring)
+  console.log("ap",scoring);
+})
 
 // Middleware to check if user is logged in
 app.use((req, res, next) => {
