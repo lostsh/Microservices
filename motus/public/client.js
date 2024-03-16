@@ -34,7 +34,13 @@ $(document).ready(function(){
 
     $('#specialButton').on('click', function() {
         // Appeler la fonction displayScores() avec le score récupéré
-        displayScores(scoring);
+
+        $.get('/userstats/' ,function(scoring){
+            
+            // Afficher le résultat
+            displayScores(scoring);
+        });
+        
     });
 });
 
