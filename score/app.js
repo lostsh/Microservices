@@ -23,7 +23,7 @@ redisClient.connect().then(() => {
   console.log('Connected to Redis');
   
   // Endpoint to set score for a player
-    app.get('/setscore', (req, res) => {
+    app.post('/setscore', (req, res) => {
     const { username, score, success} = req.body;
 
     // Check if the username already exists in Redis
