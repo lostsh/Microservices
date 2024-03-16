@@ -1,46 +1,46 @@
 // public/client.js
+var nbTry = 0;
 
 $(document).ready(function(){
-    let isCorrect = false;
-    let username = '';
-    let scoring = null;
-
-    $.get('/wordLength', function(result){
-        $('#wordLength').html(result.tmp1);
-        $('#tryNumber').html(result.tmp2);
-    });
-    
     $('#guessForm').on('submit', function(event){
-        // Récupérer la devinette de l'utilisateur
+        event.preventDefault(); // Prevent default form submission
+
+        // Get user guess
         var guess = $('#guess').val();
 
-        // Récupérer le résultat depuis le serveur en fonction de la devinette de l'utilisateur
-        $.get('/guess/' + guess, function(result){
-            // Afficher le résultat
-            $('#result').html(result.result);
-            $('#tryNumber').html(result.tryNumber1  );
-            username = result.username;
+        url = '/guess/' + guess;
 
-            if (result.tryNumber1 > 6 || result.isCorrect) {
-                $('#guessForm button[type="submit"]').prop('disabled', true);
-                scoring = result.scoring;
-                $('#specialButton').show();
-            }
+        // Fetch word for the day from server
+        $.get(url, function(result){
+            // Display the result
+            $('#result').html(result);
+
         });
-
-        // Empêcher le formulaire de se soumettre normalement
-        event.preventDefault();
-    });
-
-    $('#specialButton').on('click', function() {
-        // Appeler la fonction displayScores() avec le score récupéré
-
-        $.get('/userstats/' ,function(scoring){
-            
-            // Afficher le résultat
-            displayScores(scoring);
-        });
-        
     });
 });
+
+// when the buttn with id="view_score" is clicked
+function viewScore() {
+    // Get user from session
+    let user = $('#score')[0].innerHTML;
+    // Fetch score from server
+    
+    const URL_GETSCORE = 'http://localhost:3001/getscore';
+    $.ajax({
+        url: URL_GETSCORE,
+        method: 'GET',
+        data: { player: user },
+        headers: {
+            'Access-Control-Allow-Origin': '*'
+        },
+        success: function(score) {
+            // Display the result
+            let res = "<p>Nb Word(s) found: " + score.score_nb_words + "</p>";
+            res += "<p>Average try: " + (score.score_nb_try / score.score_nb_words).toFixed(2) + "</p>";
+            $('#score').html(res);
+            $('#score').css('visibility', 'visible');
+            $('#view_score').css('visibility', 'hidden');
+        }
+    });
+}
 

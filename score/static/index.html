@@ -19,28 +19,15 @@
 
             scoresList.innerHTML = ''; // Efface la liste précédente des scores
 
-            // Affiche les différentes valeurs
-            const playerScore = data.score.split(';');
-            const scoreItem = document.createElement('li');
-            scoreItem.textContent = `Player: ${data.player}`;
-            scoresList.appendChild(scoreItem);
-
-            const scoreItemMeanTry = document.createElement('li');
-            const meanTryResult = parseFloat(playerScore[0]) / parseFloat(playerScore[2]);
-            scoreItemMeanTry.textContent = `Mean try: ${meanTryResult.toFixed(2)}`;
-            scoresList.appendChild(scoreItemMeanTry);
-
-            const scoreItemSuccess = document.createElement('li');
-            scoreItemSuccess.textContent = `Success: ${playerScore[1]}`;
-            scoresList.appendChild(scoreItemSuccess);
-
-            const scoreItemTimePlayed = document.createElement('li');
-            scoreItemTimePlayed.textContent = `Time Played: ${playerScore[2]}`;
-            scoresList.appendChild(scoreItemTimePlayed);
+            Object.keys(data).forEach(player => {
+                const scoreItem = document.createElement('li');
+                scoreItem.textContent = `${player}: ${data[player]}`;
+                scoresList.appendChild(scoreItem);
+            });
         }
 
-        // Appeler la fonction au chargement de la page avec un joueur spécifique (ex: User1)
-        fetchAndDisplayScores('User1');
+        // Appeler la fonction au chargement de la page avec un joueur spécifique (ex: Alice)
+        fetchAndDisplayScores('User0');
     </script>
 </body>
 </html>

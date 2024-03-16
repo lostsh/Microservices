@@ -18,7 +18,7 @@ input[type="text"] {
     width: 200px;
 }
 
-button[type="submit"] {
+button {
     padding: 8px 20px;
     background-color: #007bff;
     color: #fff;
@@ -29,4 +29,8 @@ button[type="submit"] {
 #result {
     margin-top: 20px;
     text-align: center;
+}
+
+#score {
+    visibility: hidden;
 }

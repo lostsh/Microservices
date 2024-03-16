@@ -2,109 +2,94 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const redis = require('redis');
 const path = require('path');
+const cors = require('cors');
 
 const app = express();
+
+// Enable All CORS Requests
+app.use(cors());
+
 const PORT = process.env.PORT || 3001;
 const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:16379'
-// Middleware
+
 app.use(bodyParser.json());
 
-let userscore = '';
-
-// Create a Redis client
-console.log('REDIS_URL:', REDIS_URL);
 const redisClient = redis.createClient({url:REDIS_URL});
 
-// Redis error handling
 redisClient.on('error', (err) => {
   console.error('Redis Error:', err);
 });
 
 // Connect to Redis
 redisClient.connect().then(() => {
-  console.log('Connected to Redis');
+  console.log('Connected to Redis at:', REDIS_URL);
   
-  // Endpoint to set score for a player
-  app.post('/setscore', (req, res) => {
-    const { username, score, success} = req.body;
+  /* ********** Set score endpoint ********** */
+  app.post('/setscore', async (req, res) => {
+    let { player, score } = req.body;
 
-    // Check if the username already exists in Redis
-    redisClient.get(username).then((userData) => {
-        if (userData) {
-            // If user data exists, parse the data
-            const userDataArray = userData.split(';');
-            const prevScore = parseInt(userDataArray[0]);
-            const prevSuccess = parseInt(userDataArray[1]);
-            const prevTimePlayed = parseInt(userDataArray[2]);
+    try {
+      // get previous score from Redis
+      const prev_score_nb_try = await redisClient.get(player + ':nb_try');
+      const prev_score_nb_words = await redisClient.get(player + ':nb_words');
+  
+      if (prev_score_nb_try !== null) {
+        // Add previous score to the new score
+        score += parseInt(prev_score_nb_try);
+        console.log('Previous score found for:', player, 'with nb_try:', prev_score_nb_try);
+      } else {
+        console.log('Previous score not found for:', player);
+      }
+      
+      let nb_words = 1;
+      if (prev_score_nb_words !== null) {
+        // Add previous score to the new score
+        nb_words = parseInt(prev_score_nb_words) + 1;
+        console.log('Previous score found for:', player, 'with nb_words:', prev_score_nb_words);
+      } else {
+        console.log('Previous score not found for:', player);
+      }
 
-            // Update score
-            const updatedScore = prevScore + parseInt(score);
+      // Store score in Redis
+      await redisClient.set(player + ':nb_try', score);
+      console.log('Score set successfully for:', player, 'with nb_try:', score);
 
-            // Update success count if the attempt is successful
-            const updatedSuccess = success ? prevSuccess + 1 : prevSuccess;
+      await redisClient.set(player + ':nb_words', nb_words);
+      console.log('Score set successfully for:', player, 'with nb_words:', score);
 
-            // Update total time played
-            const updatedTimePlayed = prevTimePlayed + 1;
+      res.status(200).json({ message: 'Score updated successfully.' });
+    } catch (err) {
+      console.error('Error setting score:', err);
+      res.status(500).json({ message: 'Error setting score.' });
+    }
+  });
 
-            // Construct updated data string
-            const updatedData = `${updatedScore};${updatedSuccess};${updatedTimePlayed}`;
-
-            // Store updated data in Redis
-            redisClient.set(username, updatedData, (err) => {
-                if (err) {
-                    console.error('Error setting user data in Redis:', err);
-                    res.status(500).json({ message: 'Error setting user data.' });
-                } else {
-                    console.log('User data updated successfully');
-                    res.status(200).json({ message: 'User data updated successfully.' });
-                }
-            });
-        } else {
-          // Update score
-          const updatedScore = parseInt(score);
-
-          // Update success count if the attempt is successful
-          const updatedSuccess = success ?  1 : 0;
-
-          // Update total time played
-          const updatedTimePlayed = 1;
-
-          // Construct updated data string
-          const updatedData = `${updatedScore};${updatedSuccess};${updatedTimePlayed}`;
-
-          redisClient.set(username, updatedData, (err) => {
-              if (err) {
-                  console.error('Error setting user data in Redis:', err);
-                  res.status(500).json({ message: 'Error setting user data.' });
-              } else {
-                  console.log('User data updated successfully');
-                  res.status(200).json({ message: 'User data updated successfully.' });
-              }
-          });
-        }
-    }).catch((err) => {
-        console.error('Error getting user data from Redis:', err);
-        res.status(500).json({ message: 'Error getting user data.' });
-    });
-});
-
-
-  // Endpoint to get score for a player
-  app.get('/getscore', (req, res) => {
+  /* ********** Get score endpoint ********** */
+  app.get('/getscore', async (req, res) => {
     const { player } = req.query;
     // Retrieve score from Redis
-    redisClient.get(player).then((score) => {
-      if (score !== null) {
-        console.log('Score retrieved successfully:', score);
-        res.status(200).json({ player, score });
-        userscore = score
+    try {
+      // get previous score from Redis
+      const score_nb_try = await redisClient.get(player + ':nb_try');
+      const score_nb_words = await redisClient.get(player + ':nb_words');
+  
+      if (score_nb_try !== null) {
+        console.log('Score found for:', player, 'with nb_try:', score_nb_try);
       } else {
-        res.status(404).json({ message: 'Score not found for the player.' });
+        console.log('Score not found for:', player);
       }
-    }).catch((err) => {
-      console.error('Error getting score:', err);
-      res.status(500).json({ message: 'Error getting score.' });
-    });
+
+      if (score_nb_words !== null) {
+        console.log('Score found for:', player, 'with nb_words:', score_nb_words);
+      } else {
+        console.log('Score not found for:', player);
+      }
+
+      res.status(200).json({ player, score_nb_try, score_nb_words});
+    } catch (err) {
+      console.error('Error setting score:', err);
+      res.status(500).json({ message: 'Error setting score.' });
+    }
   });
 });
 

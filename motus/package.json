@@ -12,7 +12,8 @@
       "express-session": "^1.17.2",
       "winston": "^3.3.3",
       "winston-loki": "^1.0.0",
-      "prom-client": "^13.0.0"
+      "prom-client": "^13.0.0",
+      "cors": "^2.8.5"
     },
     "devDependencies": {
       "mocha": "^9.0.0"

@@ -1,5 +1,6 @@
 const express = require('express');
 const session = require('express-session');
+const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const request = require('request');
@@ -9,7 +10,9 @@ const prometheus = require('prom-client');
 
 const app = express()
 
-const apiUrl_setscore = 'http://score-app:3001/setscore';
+// Enable All CORS Requests
+app.use(cors());
+
 const URL_SETSCORE = 'http://score-app:3001/setscore';
 const URL_TOKEN = 'http://auth-app:3003/token';
 const URL_AUTHORIZE = 'http://localhost:3003/authorize';
@@ -19,10 +22,7 @@ const URL_LOKI = process.env.LOKI || "http://127.0.0.1:3100";
 const wordListPath = path.join(__dirname, 'liste_francais_utf8.txt');
 const wordList = fs.readFileSync(wordListPath, 'utf8').split('\n');
 
-let cachedRandomNumber = null;
-let tryNumber = 0;
-let player = null;
-let scoring = null;
+let current_score = 0; 
 
 // Create a logger configured to send logs to Loki
 const logger = createLogger({
@@ -80,18 +80,6 @@ function getWordForDay(randomNumber) {
   return wordList[index];
 }
 
-app.get('/wordLength', (req, res) => {
-  if (cachedRandomNumber === null) {
-    cachedRandomNumber = generateRandomNumber();
-  }
-
-  const wordForDay = getWordForDay(cachedRandomNumber);
-  const wordLength = wordForDay.length;
-  tmp1 = 'Word Length : ' + wordLength
-  tmp2 = 'guess ' + tryNumber + '/7'
-  res.send({tmp1, tmp2});
-});
-
 /* ********** Metrics endpoint ********** */
 app.get('/metrics', async (req, res) => {
   try {
@@ -136,39 +124,35 @@ app.get('/callback', (req, res) => {
 });
 
 /* ********** Guess endpoint ********** */
-
-let scoring = null;
-let isCorrect = false;
-// Endpoint to handle the word guess
-// Endpoint to handle the word guess
 app.get('/guess/:word', (req, res) => {
-  tryNumber += 1;
+
   let guess = req.params.word.toLowerCase().trim();
-  let wordForDay = getWordForDay(cachedRandomNumber).toLowerCase().trim();
-
-  console.log('Word for the day:', wordForDay);
-
-  // Perform Motus algorithm to check the guess
+  const randomNumber = generateRandomNumber();
+  let wordForDay = getWordForDay(randomNumber).toLowerCase().trim();
   var result = '';
 
+  current_score += 1;
+
+  console.log('Word for the day:', wordForDay);
+  console.log('Guess:', guess);
+
   if (typeof wordForDay === 'undefined') {
-    result = 'Failed to fetch word for the day.'; // Exit the function
+    result = 'Failed to fetch word for the day.';
+
   } else {
     
-    // Pad wordForDay with spaces if it's shorter than guess
       if (wordForDay.length < guess.length) {
         wordForDay += ' '.repeat(guess.length - wordForDay.length);
     }
-
-    // Pad guess with spaces if it's shorter than wordForDay
     else if (guess.length < wordForDay.length) {
         guess += ' '.repeat(wordForDay.length - guess.length);
     }
 
+    let isCorrect = true;
+
     for(var i = 0; i < wordForDay.length; i++) {
         if (guess[i] === wordForDay[i]) {
           result += '<span style="background-color: green;">' + guess[i] + '</span>';
-          isCorrect = true;
         } else if (wordForDay.includes(guess[i])) {
           result += '<span style="background-color: orange;">' + guess[i] + '</span>';
           isCorrect = false;
@@ -177,24 +161,22 @@ app.get('/guess/:word', (req, res) => {
           isCorrect = false;
         }
     }
-    //print the message of the end 
+
+    // If the guess is correct, append a success message
     if (isCorrect) {
+
+      console.log('Congratulations! You guessed the word!');
       result += '<p>Congratulations! You guessed the word!</p>';
-    }else if (tryNumber > 6){
-      result += '<p>You failed, the word was:</p>' + wordForDay;
-    }
+      result += '<button id="view_score" onclick="viewScore()">View Score</button>';
+      result += '<div id="score">'+ req.session.user +'</div>';
 
-    if (isCorrect || tryNumber >6){
-
- 
       const requestData = {
-        username: player,
-        score: tryNumber,
-        success: isCorrect
+        player: req.session.user,
+        score: current_score
       };
 
       const options = {
-        url: apiUrl_setscore,
+        url: URL_SETSCORE,
         method: 'POST',
         json: true,
         body: requestData
@@ -202,55 +184,21 @@ app.get('/guess/:word', (req, res) => {
 
       request(options, (error, response, body) => {
         if (error) {
-          console.error('Erreur :', error);
+            console.error('Erreur :', error);
         } else {
-          console.log('Code de statut :', response.statusCode);
-          console.log('Réponse :', body);
+            console.log('Score saved:', body);
         }
       });
 
+      current_score = 0;
 
-    };
-    
+    }
+
   }
-  tryNumber1 = 'guess ' + tryNumber + '/7'
-  console.log('tryNumber : ', tryNumber);
-
-  res.send({result,isCorrect,tryNumber1,player,scoring});
+  
+  res.send(result);
 });
 
-app.get(('/userstats'), (req, res) => {
-  if (isCorrect || tryNumber >6){
-
-    let apiUrl_getscore = 'http://score-app:3001/getscore?player='+player;
-
-    const options1 = {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
-
-    const req = http.request(apiUrl_getscore, options1, (res) => {
-      console.log('Code de statut :', res.statusCode);
-
-      res.on('data', (chunk) => {
-        console.log('Réponse :', chunk.toString());
-        scoring = chunk.toString();
-        console.log(scoring);
-      });
-    });
-
-    req.on('error', (error) => {
-      console.error('Erreur :', error);
-    });
-
-    req.end();
-  }
-  console.log("av",scoring);
-  res.send(scoring)
-  console.log("ap",scoring);
-})
 
 // Middleware to check if user is logged in
 app.use((req, res, next) => {
@@ -266,7 +214,7 @@ app.use((req, res, next) => {
     || req.path === '/register.html') {
 
     console.log('Find user:', req.session.user);
-    player = req.session.user;
+
   } else {
     console.log('No user logged:', req.session.user);
     
