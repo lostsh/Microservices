@@ -72,6 +72,10 @@ It specifies the `load balancing` algorithm. Here, it's set to round-robin, mean
     <img src="img/guess_result_2.png" alt="/guess result 2" style="width: 45%; margin-left: 5px;">
 </div>
 
+- `/userstats` : calls getscore API to disply th score on the motus main page once you have finished to play.
+
+- `/wordLength` : to give the information of the lenght of the word to the user.
+
 - `/metrics` : to get the metrics of request done and the number of successful authentication. These metrics are calculated by the prometheus server.
   
   The response is a json with the metrics or an error message
@@ -127,13 +131,13 @@ It specifies the `load balancing` algorithm. Here, it's set to round-robin, mean
 
 - `/getscore` : to get the user's score
   
-  The params are `player`
+  The params is `player`
 
-  The response is the user's score
+  The user's score is represented as {"player":"username","score":"x;y;z"}, where x is the total number of attempts, y is the count of successful attempts, and z is the total number of games played by the user.
 
 - `/setscore` : to set the user's score
 
-  The params are `player` and `score`
+  The params are `username`, `score` and `success` score is the number of tries used to find or not today's word, and success is a boolean that says if yousecced to find today's word.
 
   The response is a message to confirm the score update or an error message
 
